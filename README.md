@@ -1,6 +1,6 @@
 # PenfieldListeners
 
-Penfield event listners and Google and Adobe & Google analytics plugin
+Penfield event listners and Adobe/Google analytics plugin
 
 ### Getting started
 
