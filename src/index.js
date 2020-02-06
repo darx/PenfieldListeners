@@ -8,6 +8,10 @@ var PenfieldListeners = (function (syn) {
 
             /**
              * @name Events.create
+             * @param eventName | {String} | Name of event type you want to declare i.e. articleview
+             * @param bubbles | {Boolean} | If event should bubble up through the event chain or not
+             * @param cancelable | {Boolean} | If event can be canceled
+             * @param context | {Element, Document, Window} | Specified target to deliver to when event is met
              **/
 
             if ('string' !== typeof eventName) {
@@ -27,13 +31,33 @@ var PenfieldListeners = (function (syn) {
 
     var Analytics = (function () {
 
-        var send = (data) => {
+        var send = (data) =>  {
 
             /**
              * @name Analytics.send
              **/
 
             console.log(data);
+
+            data.forEach((item) => {
+                if (item.tracker) {
+                    ga('Synthetix.send', {
+                        hitType: 'event',
+                        eventCategory: item.tracker.category,
+                        eventAction: item.tracker.action,
+                        eventLabel: item.tracker.label,
+                        hitCallback: () => { console.log(' !! complete !! '); }
+                    });
+                }
+            });
+
+            // ga('Synthetix.send', {
+            //     hitType: 'event',
+            //     eventCategory: data.category,
+            //     eventAction: data.action,
+            //     eventLabel: data.label,
+            //     hitCallback: () => { console.log(' !! complete !! '); }
+            // });
 
         };
 
@@ -169,6 +193,23 @@ var PenfieldListeners = (function (syn) {
     var Product = (function () {
 
         var currentProduct = null;
+
+        var channels = {
+            livechat: 0,
+            callback: 1,
+            email: 2,
+            voip: 3,
+            video: 4,
+            whatsapp: 5,
+            skypeim: 6,
+            sms: 7,
+            twitter: 8,
+            ticket: 9,
+            facebook: 10,
+            knowledge: 14,
+            iva: 15,
+            formagent: 16
+        };
         
         var current = (action) => {
 
@@ -184,6 +225,7 @@ var PenfieldListeners = (function (syn) {
 
             /**
              * @name Product.trace
+             * @param func | {Function} | Name of function which you want to trance 
              **/
 
             if (!syn.window) { return; }
@@ -213,31 +255,42 @@ var PenfieldListeners = (function (syn) {
 
             /**
              * @name Product.frame
+             * @desc Will return the window of the frame where the customer last performed a click.
+             *       This helps to determine if livechat was started from within another product
              **/
 
             var elem = document.activeElement;
             if (elem && elem.name == 'Synthetix Labs') {
-
                 if (elem.contentWindow) {
                     return elem.contentWindow;
                 }
-
             }
 
             return null;
 
         };
 
-        return { current, trace, frame }; 
+        return { current, trace, frame, channels }; 
 
     })();
 
     var Parse = (function () {
 
+        var channel = (int) => {
+            try {
+                return Object.keys(Object.values(Product.channels).indexOf(+int));
+            } catch (e) { return null; }
+        };
+
         var url = (str, type, ignore) => {
 
             /**
              * @name Parse.url
+             * @param str | {String} | URL string
+             * @param type | {String} | Property names of location 
+             *        [origin, protocol, host, hostname, port, pathname, search, hash, href]
+             *
+             * @param ignore | {String} | Regular expression or string which you'd like to remove url
              **/
 
             var link = document.createElement('a');
@@ -257,10 +310,56 @@ var PenfieldListeners = (function (syn) {
 
         };
 
+        var toSearchParameters = (params, skipobjects, prefix) => {
+
+            if (skipobjects === void 0) { skipobjects = false; }
+
+            if (prefix === void 0) { prefix = ''; }
+
+            var result = '';
+
+            if (typeof params !== 'object') {
+                return prefix + '=' + encodeURIComponent(params) + '&';
+            }
+
+            for (var param in params) {
+                var c = '' + prefix + _st(param, prefix);
+
+                if (isObject(params[param]) && !skipobjects) {
+                    result += toSearchParameters(params[param], false, '' + c);
+                }
+
+                else if (Array.isArray(params[param]) && !skipobjects) {
+                    params[param].forEach((item, ind) => {
+                        result += toSearchParameters(item, false, c + '[' + ind + ']');
+                    });
+                }
+
+                else {
+                    result += c + '=' + encodeURIComponent(params[param]) + '&';
+                }
+            }
+
+            return result;
+
+            function isObject (a) {
+                if ((!!a) && (a.constructor === Object)) {
+                    return true;
+                }
+                return false;
+            }
+
+            function _st (z, g) {
+                return '' + (g != '' ? '[' : '') + z + (g != '' ? ']' : '');
+            }
+
+        };
+
         var formdata = (data) => {
 
             /**
              * @name Parse.formdata
+             * @param data | {FormData} | Must FormData object 
              **/
 
             if (data.toString() != '[object FormData]') {
@@ -290,6 +389,7 @@ var PenfieldListeners = (function (syn) {
 
             /**
              * @name Parse.payload
+             * @param data | {FormData, Object} | XHR payload which needs transformed to JSON
              **/
 
             return data.toString() != '[object FormData]' ? JSON.parse(data) : formdata(data);
@@ -299,6 +399,7 @@ var PenfieldListeners = (function (syn) {
 
             /**
              * @name Parse.request
+             * @param options | {Object} | synthetix.request XHR params {method: ..., url: ..., success: ...}
              **/
 
             if ('undifined' === typeof options) {
@@ -343,6 +444,12 @@ var PenfieldListeners = (function (syn) {
                             schema.event = 'search';
                             schema.payload = articleData;
 
+                            schema.tracker = {
+                                category: 'Synthetix',
+                                action: 'ArticleSearch',
+                                label: searchData.query
+                            };
+
                             if (Events.active.penfieldsearch) {
                                 Events.active.penfieldsearch.data = schema;
                                 document.dispatchEvent(Events.active.penfieldsearch);
@@ -358,6 +465,12 @@ var PenfieldListeners = (function (syn) {
                             else {
                                 schema.event = 'search';
                                 schema.payload = articleData;
+
+                                schema.tracker = {
+                                    category: 'Synthetix',
+                                    action: 'ArticleSearch',
+                                    label: searchData.query
+                                };
 
                                 if (Events.active.penfieldsearch) {
                                     Events.active.penfieldsearch.data = schema;
@@ -394,6 +507,12 @@ var PenfieldListeners = (function (syn) {
                                     schema.event = 'product_close';
                                     schema.payload = variablesData;
 
+                                    schema.tracker = {
+                                        category: 'Synthetix',
+                                        action: 'ProductClose',
+                                        label: schema.product
+                                    };
+
                                     if (Events.active.penfieldclose) {
                                         Events.active.penfieldclose.data = null;
                                         document.dispatchEvent(Events.active.penfieldclose);
@@ -409,8 +528,18 @@ var PenfieldListeners = (function (syn) {
 
                     case 'external/article':
 
+                        try {
+                            var articleData = payload(Opts.data);
+                        } catch (e) { return; }
+
                         schema.event = 'article_view';
-                        schema.payload = JSON.parse(Opts.data);
+                        schema.payload = articleData
+
+                        schema.tracker = {
+                            category: 'Synthetix',
+                            action: 'ArticleView',
+                            label: articleData.question
+                        };
 
                         if (Events.active.penfieldarticleview) {
                             Events.active.penfieldarticleview.data = schema;
@@ -424,6 +553,12 @@ var PenfieldListeners = (function (syn) {
                         schema.event = 'article_feedback';
                         schema.payload = payload(Opts.data);
 
+                        schema.tracker = {
+                            category: 'Synthetix',
+                            action: 'ArticleFeedback',
+                            label: toSearchParameters(schema.payload)
+                        };
+
                         if (Events.active.penfieldarticlefeedback) {
                             Events.active.penfieldarticlefeedback.data = schema;
                             document.dispatchEvent(Events.active.penfieldarticlefeedback);
@@ -435,18 +570,26 @@ var PenfieldListeners = (function (syn) {
 
                         if ('GET' == Opts.method.toUpperCase()) { return; }
 
-                        var triggerData = JSON.parse(Opts.data);
+                        var triggerData = payload(Opts.data);
                         if ('accept' == triggerData.action) {
                             schema.event = 'product_open';
                             schema.payload = triggerData;
 
+                            schema.tracker = {
+                                category: 'Synthetix',
+                                action: 'ProductOpen',
+                                label: Parse.channel(triggerData.channel)
+                            };
+
+                            if (Opts.frame && Opts.frame.currentProduct) {
+                                schema.origin = Opts.frame.currentProduct.productName;
+                                schema.tracker.label = Parse.channel(triggerData.channel) + 
+                                    ' launched from ' + schema.origin;
+                            }
+
                             if (Events.active.penfieldopen) {
                                 Events.active.penfieldopen.data = schema;
                                 document.dispatchEvent(Events.active.penfieldopen);
-                            }
-
-                            if (Opts.frame && Opts.frame.currentProduct) {
-                                schema.from = Opts.frame.currentProduct.productName;
                             }
 
                         }
@@ -464,6 +607,18 @@ var PenfieldListeners = (function (syn) {
                         schema.event = null;
                         schema.payload = entityData;
 
+                        // livechat started
+                        if (+entityData.chennel === 0) {
+
+                        }
+
+                        // callback started
+                        else if (+entityData.chennel === 1) {
+
+                        }
+
+                        else { return; }
+
                     break;
 
                     default:
@@ -477,7 +632,7 @@ var PenfieldListeners = (function (syn) {
 
         };
 
-        return { request, url, formdata, payload };
+        return { request, url, formdata, payload, toSearchParameters, channel };
 
     })();
 
@@ -485,6 +640,8 @@ var PenfieldListeners = (function (syn) {
 
         /**
          * @name init
+         * @param opts | {Object} | 
+         * @param fn | {Function} | Callback once function has completed
          **/
 
         syn.request = (function () {
@@ -534,7 +691,7 @@ var PenfieldListeners = (function (syn) {
 
     };
 
-    // creating custom event listeners
+    // Creating event listeners
     Events.create('penfieldopen', true, true);
     Events.create('penfieldclose', true, true);
     Events.create('penfieldsearch', true, true);

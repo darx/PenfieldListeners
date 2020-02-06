@@ -8,23 +8,23 @@ deleteFolderRecursive('./dist');
 fs.mkdirSync('./dist', { recursive: true })
 
 var minified = babel.transform(code, {
-	presets: ['@babel/preset-env'],
-	sourceType: 'script'
+    presets: ['@babel/preset-env'],
+    sourceType: 'script'
 }).code;
 
 fs.writeFileSync('./dist/penfield-listners.js', minified, 'utf8');
 
 var minified = babel.transform(code, {
-	presets: [
-		'@babel/preset-env', 
-	  	['minify', {
-    "mangle": {
-      "keepFnName": false
-    },
-	  	}]
-	],
-	sourceType: 'script',
-	comments: false
+    presets: [
+        '@babel/preset-env', 
+        ['minify', {
+            "mangle": {
+                "keepFnName": false
+            },
+        }]
+    ],
+    sourceType: 'script',
+    comments: false
 }).code;
 
 fs.writeFileSync('./dist/penfield-listners.min.js', minified, 'utf8');
@@ -34,13 +34,9 @@ function deleteFolderRecursive (path) {
         fs.readdirSync(path).forEach((file, index) => {
             var curPath = path + '/' + file;
 
-            if (fs.lstatSync(curPath).isDirectory()) { // recurse
+            if (fs.lstatSync(curPath).isDirectory()) {
                 deleteFolderRecursive(curPath);
-            } 
-
-            else { // delete file
-                fs.unlinkSync(curPath);
-            }
+            } else { fs.unlinkSync(curPath); }
         });
 
         fs.rmdirSync(path);
