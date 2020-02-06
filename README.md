@@ -10,7 +10,7 @@ cd PenfieldListeners
 npm install --save-dev
 ```
 
-### Production Build
+### Production build
 
 Minification of HTML/CSS/JS
 
