@@ -6,7 +6,7 @@ Penfield event listners and Google and Adobe & Google analytics plugin
 
 ```
 git clone https://github.com/darx/PenfieldListeners.git
-cd penfield-listeners
+cd PenfieldListeners
 npm install --save-dev
 ```
 
