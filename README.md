@@ -92,6 +92,18 @@ Penfield Requests
 document.addEventListener('penfieldrequests', () => { ... });
 ```
 
+Penfield Livechat Request
+
+```
+document.addEventListener('penfieldlivechatrequest', () => { ... });
+```
+
+Penfield Callback Request
+
+```
+document.addEventListener('penfieldcallbackrequest', () => { ... });
+```
+
 Penfield Analytics
 
 ```

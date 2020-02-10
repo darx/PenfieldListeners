@@ -37,8 +37,6 @@ var PenfieldListeners = (function (syn) {
              * @name Analytics.send
              **/
 
-            console.log(data);
-
             data.forEach((item) => {
                 if (item.tracker) {
                     ga('Synthetix.send', {
@@ -50,14 +48,6 @@ var PenfieldListeners = (function (syn) {
                     });
                 }
             });
-
-            // ga('Synthetix.send', {
-            //     hitType: 'event',
-            //     eventCategory: data.category,
-            //     eventAction: data.action,
-            //     eventLabel: data.label,
-            //     hitCallback: () => { console.log(' !! complete !! '); }
-            // });
 
         };
 
@@ -106,7 +96,7 @@ var PenfieldListeners = (function (syn) {
                 if (-1 === ['create', 'send', 'require'].indexOf(action)) {
                     throw new Error('Not a valid action `' + action + 
                         '`, you can only send the following actions', whitelist.actions);
-                }
+                 }
 
                 if (Events.active.penfieldanalytics) {
                     Events.active.penfieldanalytics.data = [ action, options ];
@@ -123,8 +113,12 @@ var PenfieldListeners = (function (syn) {
                  **/
 
                 if (!funcName) { return; }
-                var clientId = __ga.getAll()[0].get('clientId');
-                Component.store({ ga: clientId });
+                try {
+                    var clientId = __ga.getAll()[0].get('clientId');
+                } catch (e) { return null; }
+
+                // return __ga.apply(this, ['create', clientId, 'auto', 'Synthetix']);
+
                 return __ga.apply(null, ['create', tag, { 'clientId': clientId }]);
             };
 
@@ -399,7 +393,8 @@ var PenfieldListeners = (function (syn) {
 
             /**
              * @name Parse.request
-             * @param options | {Object} | synthetix.request XHR params {method: ..., url: ..., success: ...}
+             * @param options | {Object} | synthetix.request XHR params
+             *          {method: ..., url: ..., success: ...}
              **/
 
             if ('undifined' === typeof options) {
@@ -607,13 +602,41 @@ var PenfieldListeners = (function (syn) {
                         schema.event = null;
                         schema.payload = entityData;
 
-                        // livechat started
+                        // livechat requested
                         if (+entityData.chennel === 0) {
+
+                            schema.event = 'livechat_request';
+                            schema.payload = entityData;
+
+                            schema.tracker = {
+                                category: 'Synthetix',
+                                action: 'LivechatRequest',
+                                label: entityData.skill
+                            };
+
+                            if (Events.active.penfieldlivechatrequest) {
+                                Events.active.penfieldlivechatrequest.data = null;
+                                document.dispatchEvent(Events.active.penfieldlivechatrequest);
+                            }
 
                         }
 
-                        // callback started
+                        // callback requested
                         else if (+entityData.chennel === 1) {
+
+                            schema.event = 'callback_request';
+                            schema.payload = entityData;
+
+                            schema.tracker = {
+                                category: 'Synthetix',
+                                action: 'CallbackRequest',
+                                label: entityData.skill
+                            };
+
+                            if (Events.active.penfieldcallbackrequest) {
+                                Events.active.penfieldcallbackrequest.data = null;
+                                document.dispatchEvent(Events.active.penfieldcallbackrequest);
+                            }
 
                         }
 
@@ -698,6 +721,8 @@ var PenfieldListeners = (function (syn) {
     Events.create('penfieldarticleview', true, true);
     Events.create('penfieldarticlefeedback', true, true);
     Events.create('penfieldrequests', true, true);
+    Events.create('penfieldlivechatrequest', true, true);
+    Events.create('penfieldcallbackrequest', true, true);
     Events.create('penfieldanalytics', true, true);
 
     return { init, Analytics };
